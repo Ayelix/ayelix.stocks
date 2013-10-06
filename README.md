@@ -1,0 +1,2 @@
+amosolgo.stocks
+===============
