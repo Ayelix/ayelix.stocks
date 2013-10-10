@@ -81,11 +81,11 @@ public class MainActivity extends Activity {
 	/**
 	 * AsyncTask to execute the HTTP operations.
 	 */
-	private class HTTPTask extends AsyncTask<String, Void, BufferedReader> {
+	private class HTTPTask extends AsyncTask<String, Void, String> {
 
 		@Override
-		protected BufferedReader doInBackground(String... params) {
-			BufferedReader retVal = null;
+		protected String doInBackground(String... params) {
+			String retVal = null;
 
 			// Get the HTTP client
 			HttpClient client = new DefaultHttpClient();
@@ -96,8 +96,16 @@ public class MainActivity extends Activity {
 			try {
 				// Get the response
 				HttpResponse response = client.execute(request);
-				retVal = new BufferedReader(new InputStreamReader(response
-						.getEntity().getContent()));
+				BufferedReader responseReader = new BufferedReader(
+						new InputStreamReader(response.getEntity().getContent()));
+
+				// Get the results as a string
+				String line = new String();
+				StringBuilder sb = new StringBuilder();
+				while ((line = responseReader.readLine()) != null) {
+					sb.append(line + "\n");
+				}
+				retVal = sb.toString();
 
 			} catch (ClientProtocolException e) {
 				// TODO Auto-generated catch block
@@ -108,15 +116,20 @@ public class MainActivity extends Activity {
 				e.printStackTrace();
 			}
 
+			// Return the response
 			return retVal;
 
 		} // End method doInBackground()
 
 		@Override
-		protected void onPostExecute(BufferedReader result) {
+		protected void onPostExecute(String result) {
 			if (result != null) {
-				// Start the Parser with the resulting reader
-				new ParserTask().execute(result);
+				// Start a Parser with the results
+				if (!result.equals("") && (null != result)) {
+					new ParserTask().execute(result);
+				} else {
+					Log.e(TAG, "ParserTask not started: null or empty string.");
+				}
 			}
 		} // End method onPostExecute()
 
@@ -125,11 +138,10 @@ public class MainActivity extends Activity {
 	/**
 	 * AsyncTask to parse HTTP results.
 	 */
-	private class ParserTask extends AsyncTask<BufferedReader, String, Void> {
+	private class ParserTask extends AsyncTask<String, String, Void> {
 
 		@Override
-		protected Void doInBackground(BufferedReader... params) {
-			// TODO Auto-generated method stub
+		protected Void doInBackground(String... params) {
 			return null;
 		} // End method doInBackground()
 
