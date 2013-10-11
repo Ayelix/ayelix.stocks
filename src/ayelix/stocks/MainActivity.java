@@ -1,9 +1,7 @@
 package ayelix.stocks;
 
-import java.io.BufferedInputStream;
 import java.io.BufferedReader;
 import java.io.IOException;
-import java.io.InputStream;
 import java.io.InputStreamReader;
 import java.net.MalformedURLException;
 import java.net.URL;
@@ -23,6 +21,7 @@ import android.app.Activity;
 import android.app.Service;
 import android.graphics.Bitmap;
 import android.graphics.BitmapFactory;
+import android.graphics.Typeface;
 import android.net.Uri;
 import android.os.AsyncTask;
 import android.os.Bundle;
@@ -169,6 +168,7 @@ public class MainActivity extends Activity {
 			value.setLayoutParams(valueParams);
 			value.setHint("None");
 			value.setTextAppearance(this, android.R.style.TextAppearance_Medium);
+			value.setTypeface(null, Typeface.BOLD);
 			layout.addView(value);
 
 			// Add the row to the main layout
