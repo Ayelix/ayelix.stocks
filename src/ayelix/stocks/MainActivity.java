@@ -17,6 +17,7 @@ import org.jsoup.select.Elements;
 
 import android.app.Activity;
 import android.app.Service;
+import android.net.Uri;
 import android.os.AsyncTask;
 import android.os.Bundle;
 import android.util.Log;
@@ -171,15 +172,18 @@ public class MainActivity extends Activity {
 
 		@Override
 		protected String doInBackground(String... params) {
-			Log.d(TAG, "HTTPTask requesting " + params[0]);
 
 			String retVal = null;
+			
+			// Build the properly-formatted URI
+			String formattedUri = BASE_URL + Uri.encode(params[0]);
+			Log.d(TAG, "HTTPTask requesting " + formattedUri);
 
 			// Get the HTTP client
 			final HttpClient client = new DefaultHttpClient();
 
-			// Build the request by appending the query to the URL
-			final HttpGet request = new HttpGet(BASE_URL + params[0]);
+			// Get the HTTP request
+			final HttpGet request = new HttpGet(formattedUri);
 
 			try {
 				// Get the response
