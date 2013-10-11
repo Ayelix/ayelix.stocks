@@ -11,6 +11,9 @@ import org.apache.http.client.ClientProtocolException;
 import org.apache.http.client.HttpClient;
 import org.apache.http.client.methods.HttpGet;
 import org.apache.http.impl.client.DefaultHttpClient;
+import org.jsoup.Jsoup;
+import org.jsoup.nodes.Document;
+import org.jsoup.select.Elements;
 
 import android.app.Activity;
 import android.os.AsyncTask;
@@ -45,15 +48,21 @@ public class MainActivity extends Activity {
 	private TextView nameTextView, priceTextView;
 
 	/** List of properties to find and display. */
-	private List<StockProperty> propertyList = Arrays.asList(
+	private final List<StockProperty> propertyList = Arrays.asList(
 	/** Company name */
 	new StockProperty("name", "Name", this),
+	/** Stock exchange for this stock */
+	new StockProperty("exchange", "Exchange", this),
 	/** Stock price */
 	new StockProperty("price", "Price", this),
+	/** Currency being used */
+	new StockProperty("priceCurrency", "Currency", this),
 	/** Price change in currency */
 	new StockProperty("priceChange", "Change", this),
 	/** Price change in percent */
-	new StockProperty("priceChangePercent", "Change (%)", this));
+	new StockProperty("priceChangePercent", "Change (%)", this),
+	/** Source of provided data */
+	new StockProperty("dataSource", "Data Source", this));
 
 	@Override
 	protected void onCreate(Bundle savedInstanceState) {
@@ -110,24 +119,26 @@ public class MainActivity extends Activity {
 	 */
 	private void createAndAddViews() {
 		// Create the layout parameters for each field
-		LinearLayout.LayoutParams labelParams = new LinearLayout.LayoutParams(
+		final LinearLayout.LayoutParams labelParams = new LinearLayout.LayoutParams(
 				0, LayoutParams.WRAP_CONTENT, 0.3f);
 		labelParams.gravity = Gravity.RIGHT;
-		LinearLayout.LayoutParams valueParams = new LinearLayout.LayoutParams(
+		labelParams.setMargins(0, 25, 0, 0);
+		final LinearLayout.LayoutParams valueParams = new LinearLayout.LayoutParams(
 				0, LayoutParams.WRAP_CONTENT, 0.7f);
 		valueParams.gravity = Gravity.LEFT;
+		valueParams.setMargins(0, 25, 0, 0);
 
 		// Add a layout and text views for each property
 		for (final StockProperty property : propertyList) {
 			Log.d(TAG, "Adding row for property: " + property.getPropertyName());
 
 			// Create a horizontal layout for the label and value
-			LinearLayout layout = new LinearLayout(this);
+			final LinearLayout layout = new LinearLayout(this);
 			layout.setLayoutParams(new LinearLayout.LayoutParams(
 					LayoutParams.MATCH_PARENT, LayoutParams.WRAP_CONTENT));
 
 			// Create a TextView for the label
-			TextView label = new TextView(this);
+			final TextView label = new TextView(this);
 			label.setLayoutParams(labelParams);
 			label.setText(property.getLabelText());
 			label.setTextAppearance(this, android.R.style.TextAppearance_Medium);
@@ -135,7 +146,7 @@ public class MainActivity extends Activity {
 
 			// Configure and add the value TextView (created when the property
 			// was constructed)
-			TextView value = property.getView();
+			final TextView value = property.getView();
 			value.setLayoutParams(valueParams);
 			value.setHint("None");
 			value.setTextAppearance(this, android.R.style.TextAppearance_Medium);
@@ -158,10 +169,10 @@ public class MainActivity extends Activity {
 			String retVal = null;
 
 			// Get the HTTP client
-			HttpClient client = new DefaultHttpClient();
+			final HttpClient client = new DefaultHttpClient();
 
 			// Build the request by appending the query to the URL
-			HttpGet request = new HttpGet(BASE_URL + params[0]);
+			final HttpGet request = new HttpGet(BASE_URL + params[0]);
 
 			try {
 				// Get the response
@@ -211,14 +222,56 @@ public class MainActivity extends Activity {
 	/**
 	 * AsyncTask to parse HTTP results.
 	 */
-	private class ParserTask extends AsyncTask<String, String, Void> {
-
+	private class ParserTask extends AsyncTask<String, StockProperty, Void> {
 		@Override
 		protected Void doInBackground(String... params) {
 			Log.d(TAG, "ParserTask parsing results.");
 
+			// Get a Jsoup document for the string
+			final Document doc = Jsoup.parse(params[0]);
+
+			// Get all the meta elements from the document
+			final Elements metaElements = doc.getElementsByTag("meta");
+			
+			// String to be displayed for the first error
+			String errorValue = "Not found";
+
+			// Parse the value for each property
+			for (final StockProperty property : propertyList) {
+				// Select the Element(s) containing the current property
+				final Elements currentElements = metaElements
+						.select("[itemprop=" + property.getPropertyName() + "]");
+
+				// Make sure there is at least one result
+				if (!currentElements.isEmpty()) {
+					// Get the value from the first element (we'll just assume
+					// the first one is the right one).
+					final String value = currentElements.first()
+							.attr("content");
+
+					// Set the StockProperty value to the parsed value
+					property.setNextValue(value);
+
+				} else {
+					// Set the value to something indicating an error
+					property.setNextValue(errorValue);
+					errorValue = "";
+				}
+
+				// Publish the values as they are parsed
+				publishProgress(property);
+			}
+
 			return null;
 		} // End method doInBackground()
+
+		@Override
+		protected void onProgressUpdate(StockProperty... properties) {
+			// Update the value for any properties provided
+			for (final StockProperty property : properties) {
+				property.updateValue();
+			}
+		}
 
 	} // End class ParserTask
 
