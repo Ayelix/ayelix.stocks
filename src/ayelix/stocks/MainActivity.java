@@ -42,7 +42,6 @@ import android.widget.LinearLayout.LayoutParams;
 import android.widget.TextView;
 import android.widget.TextView.OnEditorActionListener;
 
-//TODO: Refactor members to follow m_* naming.
 //TODO: Null/empty check in search() doesn't work.
 
 public class MainActivity extends Activity {
@@ -67,7 +66,7 @@ public class MainActivity extends Activity {
 	private LinearLayout m_resultsLayout;
 
 	/** List of properties to find and display. */
-	private final List<StockProperty> propertyList = Arrays.asList(
+	private final List<StockProperty> m_propertyList = Arrays.asList(
 	/** Company name */
 	new StockProperty("name", "Name", this),
 	/** Stock exchange for this stock */
@@ -201,7 +200,7 @@ public class MainActivity extends Activity {
 		valueParams.setMargins(0, 25, 0, 0);
 
 		// Add a layout and text views for each property
-		for (final StockProperty property : propertyList) {
+		for (final StockProperty property : m_propertyList) {
 			Log.d(TAG, "Adding row for property: " + property.getPropertyName());
 
 			// Create a horizontal layout for the label and value
@@ -315,7 +314,7 @@ public class MainActivity extends Activity {
 			String errorValue = "Not found";
 
 			// Parse the value for each property
-			for (final StockProperty property : propertyList) {
+			for (final StockProperty property : m_propertyList) {
 				// Select the Element(s) containing the current property
 				final Elements currentElements = metaElements
 						.select("[itemprop=" + property.getPropertyName() + "]");
