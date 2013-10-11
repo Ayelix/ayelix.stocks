@@ -41,6 +41,9 @@ import android.widget.LinearLayout.LayoutParams;
 import android.widget.TextView;
 import android.widget.TextView.OnEditorActionListener;
 
+//TODO: Implement periodic refresh of stock info (just a re-search of the most recent search string)
+//TODO: Give some kind of progress indication
+
 public class MainActivity extends Activity {
 	private static final String TAG = "MainActivity";
 
@@ -330,8 +333,9 @@ public class MainActivity extends Activity {
 					// Read the image from the URL
 					chart = BitmapFactory.decodeStream(new URL(url)
 							.openStream());
-					
-					Log.d(TAG, "ImageTask done downloading image, scaling image now.");
+
+					Log.d(TAG,
+							"ImageTask done downloading image, scaling image now.");
 
 					// Scale the bitmap to fit the ImageView width
 					double scale = m_chartImageView.getWidth()
@@ -340,7 +344,7 @@ public class MainActivity extends Activity {
 					int newHeight = (int) (chart.getHeight() * scale);
 					chart = Bitmap.createScaledBitmap(chart, newWidth,
 							newHeight, false);
-					
+
 					Log.d(TAG, "ImageTask done scaling image.");
 
 				} catch (MalformedURLException e) {
