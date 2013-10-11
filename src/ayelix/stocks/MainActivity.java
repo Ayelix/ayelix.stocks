@@ -16,6 +16,7 @@ import org.jsoup.nodes.Document;
 import org.jsoup.select.Elements;
 
 import android.app.Activity;
+import android.app.Service;
 import android.os.AsyncTask;
 import android.os.Bundle;
 import android.util.Log;
@@ -25,6 +26,7 @@ import android.view.Menu;
 import android.view.View;
 import android.view.View.OnClickListener;
 import android.view.inputmethod.EditorInfo;
+import android.view.inputmethod.InputMethodManager;
 import android.widget.Button;
 import android.widget.EditText;
 import android.widget.LinearLayout;
@@ -111,6 +113,11 @@ public class MainActivity extends Activity {
 	 */
 	private void search(final String searchString) {
 		Log.d(TAG, "Searching string: " + searchString);
+		// Remove the keyboard to better show results
+		((InputMethodManager) this
+				.getSystemService(Service.INPUT_METHOD_SERVICE))
+				.hideSoftInputFromWindow(m_searchEditText.getWindowToken(), 0);
+		// Start the search task
 		new HTTPTask().execute(searchString);
 	} // End method search()
 
