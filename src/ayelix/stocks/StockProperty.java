@@ -29,6 +29,14 @@ public class StockProperty {
 		}
 		return m_view;
 	}
+	
+	public void setNextValue(String value) {
+		m_nextValue = value;
+	}
+	
+	public void updateValue() {
+		m_view.setText(m_nextValue);
+	}
 
 	public void updateValue(String value) {
 		m_view.setText(value);
