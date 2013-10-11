@@ -42,7 +42,6 @@ import android.widget.TextView;
 import android.widget.TextView.OnEditorActionListener;
 
 //TODO: Implement periodic refresh of stock info (just a re-search of the most recent search string)
-//TODO: Give some kind of progress indication
 
 public class MainActivity extends Activity {
 	private static final String TAG = "MainActivity";
@@ -127,10 +126,15 @@ public class MainActivity extends Activity {
 	 */
 	private void search(final String searchString) {
 		Log.d(TAG, "Searching string: " + searchString);
+		
+		// Disable the Go button to show that the search is in progress
+		m_goButton.setEnabled(false);
+		
 		// Remove the keyboard to better show results
 		((InputMethodManager) this
 				.getSystemService(Service.INPUT_METHOD_SERVICE))
 				.hideSoftInputFromWindow(m_searchEditText.getWindowToken(), 0);
+		
 		// Start the search task
 		new HTTPTask().execute(searchString);
 	} // End method search()
@@ -362,10 +366,14 @@ public class MainActivity extends Activity {
 
 		@Override
 		protected void onPostExecute(Bitmap result) {
+			// Update the image with the resulting bitmap
 			m_chartImageView.setImageBitmap(result);
 			if (null == result) {
 				Log.d(TAG, "ImageView cleared due to null Bitmap.");
 			}
+			
+			// Enable to Go button to show the search is complete
+			m_goButton.setEnabled(true);
 		}
 
 	}
