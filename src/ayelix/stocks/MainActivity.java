@@ -3,6 +3,8 @@ package ayelix.stocks;
 import java.io.BufferedReader;
 import java.io.IOException;
 import java.io.InputStreamReader;
+import java.util.Arrays;
+import java.util.List;
 
 import org.apache.http.HttpResponse;
 import org.apache.http.client.ClientProtocolException;
@@ -14,6 +16,7 @@ import android.app.Activity;
 import android.os.AsyncTask;
 import android.os.Bundle;
 import android.util.Log;
+import android.view.Gravity;
 import android.view.KeyEvent;
 import android.view.Menu;
 import android.view.View;
@@ -21,25 +24,49 @@ import android.view.View.OnClickListener;
 import android.view.inputmethod.EditorInfo;
 import android.widget.Button;
 import android.widget.EditText;
+import android.widget.LinearLayout;
+import android.widget.LinearLayout.LayoutParams;
 import android.widget.TextView;
 import android.widget.TextView.OnEditorActionListener;
 
 public class MainActivity extends Activity {
 	private static final String TAG = "MainActivity";
 
+	/** URL to which a stock query is appended. */
 	private static final String BASE_URL = "http://www.google.com/finance?q=";
 
+	/** Main activity layout. */
+	private LinearLayout m_resultsLayout;
+	/** EditText for search query input. */
 	private EditText m_searchEditText;
+	/** Button to start a search. */
 	private Button m_goButton;
+	// TextViews for results.
+	private TextView nameTextView, priceTextView;
+
+	/** List of properties to find and display. */
+	private List<StockProperty> propertyList = Arrays.asList(
+	/** Company name */
+	new StockProperty("name", "Name", this),
+	/** Stock price */
+	new StockProperty("price", "Price", this),
+	/** Price change in currency */
+	new StockProperty("priceChange", "Change", this),
+	/** Price change in percent */
+	new StockProperty("priceChangePercent", "Change (%)", this));
 
 	@Override
 	protected void onCreate(Bundle savedInstanceState) {
 		super.onCreate(savedInstanceState);
 		setContentView(R.layout.activity_main);
 
-		// Get the views
+		// Get the pre-created views
+		m_resultsLayout = (LinearLayout) findViewById(R.id.resultsLayout);
 		m_searchEditText = (EditText) findViewById(R.id.searchEditText);
 		m_goButton = (Button) findViewById(R.id.goButton);
+
+		// Create and add the views for each property
+		createAndAddViews();
 
 		// Create the listener for the search box "Go" action
 		m_searchEditText
@@ -79,12 +106,55 @@ public class MainActivity extends Activity {
 	} // End method search()
 
 	/**
+	 * Creates and adds rows in the UI for each parameter (label and value).
+	 */
+	private void createAndAddViews() {
+		// Create the layout parameters for each field
+		LinearLayout.LayoutParams labelParams = new LinearLayout.LayoutParams(
+				0, LayoutParams.WRAP_CONTENT, 0.3f);
+		labelParams.gravity = Gravity.RIGHT;
+		LinearLayout.LayoutParams valueParams = new LinearLayout.LayoutParams(
+				0, LayoutParams.WRAP_CONTENT, 0.7f);
+		valueParams.gravity = Gravity.LEFT;
+
+		// Add a layout and text views for each property
+		for (final StockProperty property : propertyList) {
+			Log.d(TAG, "Adding row for property: " + property.getPropertyName());
+
+			// Create a horizontal layout for the label and value
+			LinearLayout layout = new LinearLayout(this);
+			layout.setLayoutParams(new LinearLayout.LayoutParams(
+					LayoutParams.MATCH_PARENT, LayoutParams.WRAP_CONTENT));
+
+			// Create a TextView for the label
+			TextView label = new TextView(this);
+			label.setLayoutParams(labelParams);
+			label.setText(property.getLabelText());
+			label.setTextAppearance(this, android.R.style.TextAppearance_Medium);
+			layout.addView(label);
+
+			// Configure and add the value TextView (created when the property
+			// was constructed)
+			TextView value = property.getView();
+			value.setLayoutParams(valueParams);
+			value.setHint("None");
+			value.setTextAppearance(this, android.R.style.TextAppearance_Medium);
+			layout.addView(value);
+
+			// Add the row to the main layout
+			m_resultsLayout.addView(layout);
+		}
+	}
+
+	/**
 	 * AsyncTask to execute the HTTP operations.
 	 */
 	private class HTTPTask extends AsyncTask<String, Void, String> {
 
 		@Override
 		protected String doInBackground(String... params) {
+			Log.d(TAG, "HTTPTask requesting " + params[0]);
+
 			String retVal = null;
 
 			// Get the HTTP client
@@ -107,6 +177,8 @@ public class MainActivity extends Activity {
 				}
 				retVal = sb.toString();
 
+				responseReader.close();
+
 			} catch (ClientProtocolException e) {
 				// TODO Auto-generated catch block
 				e.printStackTrace();
@@ -127,6 +199,7 @@ public class MainActivity extends Activity {
 				// Start a Parser with the results
 				if (!result.equals("") && (null != result)) {
 					new ParserTask().execute(result);
+					Log.d(TAG, "Request complete, ParserTask started.");
 				} else {
 					Log.e(TAG, "ParserTask not started: null or empty string.");
 				}
@@ -142,6 +215,8 @@ public class MainActivity extends Activity {
 
 		@Override
 		protected Void doInBackground(String... params) {
+			Log.d(TAG, "ParserTask parsing results.");
+
 			return null;
 		} // End method doInBackground()
 
