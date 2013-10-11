@@ -25,6 +25,7 @@ import android.graphics.Typeface;
 import android.net.Uri;
 import android.os.AsyncTask;
 import android.os.Bundle;
+import android.os.Handler;
 import android.util.Log;
 import android.view.Gravity;
 import android.view.KeyEvent;
@@ -41,13 +42,17 @@ import android.widget.LinearLayout.LayoutParams;
 import android.widget.TextView;
 import android.widget.TextView.OnEditorActionListener;
 
-//TODO: Implement periodic refresh of stock info (just a re-search of the most recent search string)
+//TODO: Refactor members to follow m_* naming.
+//TODO: Null/empty check in search() doesn't work.
 
 public class MainActivity extends Activity {
 	private static final String TAG = "MainActivity";
 
 	/** URL to which a stock query is appended. */
 	private static final String BASE_URL = "http://www.google.com/finance?q=";
+	
+	/** Refresh interval in milliseconds. */
+	private static final int REFRESH_DELAY = 10000;
 
 	/** Property name for the chart image URL */
 	private static final String IMAGE_PROPERTY = "imageUrl";
@@ -78,6 +83,14 @@ public class MainActivity extends Activity {
 	/** Source of provided data */
 	new StockProperty("dataSource", "Data Source", this));
 
+	/** Latest search string. */
+	private String m_lastSearch = "";
+
+	/** Handler for refresh task. */
+	private Handler m_handler;
+	/** Runnable refresh task. */
+	private Runnable m_refreshRunnable;
+
 	@Override
 	protected void onCreate(Bundle savedInstanceState) {
 		super.onCreate(savedInstanceState);
@@ -101,7 +114,7 @@ public class MainActivity extends Activity {
 						boolean handled = false;
 						// The GO action will start a search
 						if (EditorInfo.IME_ACTION_GO == actionId) {
-							search(m_searchEditText.getText().toString());
+							search();
 							handled = true;
 						}
 						return handled;
@@ -112,11 +125,29 @@ public class MainActivity extends Activity {
 		m_goButton.setOnClickListener(new OnClickListener() {
 			@Override
 			public void onClick(View v) {
-				search(m_searchEditText.getText().toString());
+				search();
 			}
 		});
 
+		// Create the refresh task
+		m_handler = new Handler();
+		m_refreshRunnable = new Runnable() {
+			@Override
+			public void run() {
+				Log.d(TAG, "Refreshing results.");
+				search();
+			}
+		};
+
 	} // End method onCreate()
+	
+	@Override
+	public void onPause() {
+		super.onPause();
+		
+		// Remove the refresh if it's scheduled
+		m_handler.removeCallbacks(m_refreshRunnable);
+	}
 
 	/**
 	 * Starts a search for the given string.
@@ -124,19 +155,35 @@ public class MainActivity extends Activity {
 	 * @param searchString
 	 *            The string to search for (stock symbol or company name).
 	 */
-	private void search(final String searchString) {
-		Log.d(TAG, "Searching string: " + searchString);
+	private void search() {
+		String searchString = m_searchEditText.getText().toString();
+
+		// Remove the refresh if it's scheduled
+		m_handler.removeCallbacks(m_refreshRunnable);
 		
-		// Disable the Go button to show that the search is in progress
-		m_goButton.setEnabled(false);
-		
-		// Remove the keyboard to better show results
-		((InputMethodManager) this
-				.getSystemService(Service.INPUT_METHOD_SERVICE))
-				.hideSoftInputFromWindow(m_searchEditText.getWindowToken(), 0);
-		
-		// Start the search task
-		new HTTPTask().execute(searchString);
+		if ((searchString != null) && (searchString != "")) {
+			Log.d(TAG, "Searching string: \"" + searchString + "\"");
+
+			// Save the search string
+			m_lastSearch = searchString;
+
+			// Disable the Go button to show that the search is in progress
+			m_goButton.setEnabled(false);
+
+			// Remove the keyboard to better show results
+			((InputMethodManager) this
+					.getSystemService(Service.INPUT_METHOD_SERVICE))
+					.hideSoftInputFromWindow(m_searchEditText.getWindowToken(),
+							0);
+
+			// Start the search task
+			new HTTPTask().execute(searchString);
+			
+			// Schedule the refresh
+			m_handler.postDelayed(m_refreshRunnable, REFRESH_DELAY);
+		} else {
+			Log.d(TAG, "Ignoring null or empty search string.");
+		}
 	} // End method search()
 
 	/**
@@ -371,7 +418,7 @@ public class MainActivity extends Activity {
 			if (null == result) {
 				Log.d(TAG, "ImageView cleared due to null Bitmap.");
 			}
-			
+
 			// Enable to Go button to show the search is complete
 			m_goButton.setEnabled(true);
 		}
