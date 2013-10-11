@@ -1,8 +1,12 @@
 package ayelix.stocks;
 
+import java.io.BufferedInputStream;
 import java.io.BufferedReader;
 import java.io.IOException;
+import java.io.InputStream;
 import java.io.InputStreamReader;
+import java.net.MalformedURLException;
+import java.net.URL;
 import java.util.Arrays;
 import java.util.List;
 
@@ -17,6 +21,8 @@ import org.jsoup.select.Elements;
 
 import android.app.Activity;
 import android.app.Service;
+import android.graphics.Bitmap;
+import android.graphics.BitmapFactory;
 import android.net.Uri;
 import android.os.AsyncTask;
 import android.os.Bundle;
@@ -30,6 +36,7 @@ import android.view.inputmethod.EditorInfo;
 import android.view.inputmethod.InputMethodManager;
 import android.widget.Button;
 import android.widget.EditText;
+import android.widget.ImageView;
 import android.widget.LinearLayout;
 import android.widget.LinearLayout.LayoutParams;
 import android.widget.TextView;
@@ -41,14 +48,17 @@ public class MainActivity extends Activity {
 	/** URL to which a stock query is appended. */
 	private static final String BASE_URL = "http://www.google.com/finance?q=";
 
-	/** Main activity layout. */
-	private LinearLayout m_resultsLayout;
+	/** Property name for the chart image URL */
+	private static final String IMAGE_PROPERTY = "imageUrl";
+
 	/** EditText for search query input. */
 	private EditText m_searchEditText;
 	/** Button to start a search. */
 	private Button m_goButton;
-	// TextViews for results.
-	private TextView nameTextView, priceTextView;
+	/** ImageView for chart image. */
+	private ImageView m_chartImageView;
+	/** LinearLayout for parsed results. */
+	private LinearLayout m_resultsLayout;
 
 	/** List of properties to find and display. */
 	private final List<StockProperty> propertyList = Arrays.asList(
@@ -73,9 +83,10 @@ public class MainActivity extends Activity {
 		setContentView(R.layout.activity_main);
 
 		// Get the pre-created views
-		m_resultsLayout = (LinearLayout) findViewById(R.id.resultsLayout);
 		m_searchEditText = (EditText) findViewById(R.id.searchEditText);
 		m_goButton = (Button) findViewById(R.id.goButton);
+		m_resultsLayout = (LinearLayout) findViewById(R.id.resultsLayout);
+		m_chartImageView = (ImageView) findViewById(R.id.chartImageView);
 
 		// Create and add the views for each property
 		createAndAddViews();
@@ -174,7 +185,7 @@ public class MainActivity extends Activity {
 		protected String doInBackground(String... params) {
 
 			String retVal = null;
-			
+
 			// Build the properly-formatted URI
 			String formattedUri = BASE_URL + Uri.encode(params[0]);
 			Log.d(TAG, "HTTPTask requesting " + formattedUri);
@@ -218,12 +229,14 @@ public class MainActivity extends Activity {
 		@Override
 		protected void onPostExecute(String result) {
 			if (result != null) {
-				// Start a Parser with the results
+				// Start the parser and image threads with the results
 				if (!result.equals("") && (null != result)) {
 					new ParserTask().execute(result);
-					Log.d(TAG, "Request complete, ParserTask started.");
+					new ImageTask().execute(result);
+					Log.d(TAG, "Request complete, Parsing tasks started.");
 				} else {
-					Log.e(TAG, "ParserTask not started: null or empty string.");
+					Log.e(TAG,
+							"Parsing tasks not started: null or empty string.");
 				}
 			}
 		} // End method onPostExecute()
@@ -243,7 +256,7 @@ public class MainActivity extends Activity {
 
 			// Get all the meta elements from the document
 			final Elements metaElements = doc.getElementsByTag("meta");
-			
+
 			// String to be displayed for the first error
 			String errorValue = "Not found";
 
@@ -285,6 +298,73 @@ public class MainActivity extends Activity {
 		}
 
 	} // End class ParserTask
+
+	/**
+	 * AsyncTask to handle downloading and updating the chart image.
+	 */
+	private class ImageTask extends AsyncTask<String, Void, Bitmap> {
+
+		@Override
+		protected Bitmap doInBackground(String... params) {
+			Log.d(TAG, "ImageTask downloading image.");
+
+			Bitmap chart = null;
+
+			// Get a Jsoup document for the string
+			final Document doc = Jsoup.parse(params[0]);
+
+			// Get all the meta elements from the document
+			final Elements metaElements = doc.getElementsByTag("meta");
+
+			// Select the Element(s) containing the image URL property
+			final Elements currentElements = metaElements.select("[itemprop="
+					+ IMAGE_PROPERTY + "]");
+
+			// Make sure there is at least one result
+			if (!currentElements.isEmpty()) {
+				// Get the value from the first element (we'll just assume
+				// the first one is the right one).
+				final String url = currentElements.first().attr("content");
+
+				try {
+					// Read the image from the URL
+					chart = BitmapFactory.decodeStream(new URL(url)
+							.openStream());
+					
+					Log.d(TAG, "ImageTask done downloading image, scaling image now.");
+
+					// Scale the bitmap to fit the ImageView width
+					double scale = m_chartImageView.getWidth()
+							/ chart.getWidth();
+					int newWidth = (int) (chart.getWidth() * scale);
+					int newHeight = (int) (chart.getHeight() * scale);
+					chart = Bitmap.createScaledBitmap(chart, newWidth,
+							newHeight, false);
+					
+					Log.d(TAG, "ImageTask done scaling image.");
+
+				} catch (MalformedURLException e) {
+					Log.e(TAG, "Malformed URL parsed in ImageTask: " + url);
+				} catch (IOException e) {
+					Log.e(TAG, "Error opening stream from URL: " + url);
+				}
+
+			} else {
+				Log.d(TAG, "ImageTask unable to parse image URL from HTML.");
+			}
+
+			return chart;
+		}
+
+		@Override
+		protected void onPostExecute(Bitmap result) {
+			m_chartImageView.setImageBitmap(result);
+			if (null == result) {
+				Log.d(TAG, "ImageView cleared due to null Bitmap.");
+			}
+		}
+
+	}
 
 	@Override
 	public boolean onCreateOptionsMenu(Menu menu) {
