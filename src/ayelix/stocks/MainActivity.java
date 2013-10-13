@@ -160,7 +160,7 @@ public class MainActivity extends Activity {
 		// Remove the refresh if it's scheduled
 		m_handler.removeCallbacks(m_refreshRunnable);
 		
-		if ((searchString != null) && (searchString != "")) {
+		if ((searchString != null) && (!searchString.equals(""))) {
 			Log.d(TAG, "Searching string: \"" + searchString + "\"");
 
 			// Save the search string
