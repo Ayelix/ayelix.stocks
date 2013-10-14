@@ -49,7 +49,7 @@ public class MainActivity extends Activity {
 
 	/** URL to which a stock query is appended. */
 	private static final String BASE_URL = "http://www.google.com/finance?q=";
-	
+
 	/** Refresh interval in milliseconds. */
 	private static final int REFRESH_DELAY = 10000;
 
@@ -134,16 +134,16 @@ public class MainActivity extends Activity {
 			@Override
 			public void run() {
 				Log.d(TAG, "Refreshing results.");
-				search();
+				refresh();
 			}
 		};
 
 	} // End method onCreate()
-	
+
 	@Override
 	public void onPause() {
 		super.onPause();
-		
+
 		// Remove the refresh if it's scheduled
 		m_handler.removeCallbacks(m_refreshRunnable);
 	}
@@ -159,15 +159,12 @@ public class MainActivity extends Activity {
 
 		// Remove the refresh if it's scheduled
 		m_handler.removeCallbacks(m_refreshRunnable);
-		
+
 		if ((searchString != null) && (!searchString.equals(""))) {
 			Log.d(TAG, "Searching string: \"" + searchString + "\"");
 
 			// Save the search string
 			m_lastSearch = searchString;
-
-			// Disable the Go button to show that the search is in progress
-			m_goButton.setEnabled(false);
 
 			// Remove the keyboard to better show results
 			((InputMethodManager) this
@@ -175,15 +172,27 @@ public class MainActivity extends Activity {
 					.hideSoftInputFromWindow(m_searchEditText.getWindowToken(),
 							0);
 
-			// Start the search task
-			new HTTPTask().execute(searchString);
-			
-			// Schedule the refresh
-			m_handler.postDelayed(m_refreshRunnable, REFRESH_DELAY);
+			// Call refresh to start the search (lastSearch was set for it
+			// above)
+			refresh();
 		} else {
 			Log.d(TAG, "Ignoring null or empty search string.");
 		}
 	} // End method search()
+
+	/**
+	 * Starts a search for the last searched string.
+	 */
+	private void refresh() {
+		// Disable the Go button to show that the search is in progress
+		m_goButton.setEnabled(false);
+
+		// Start the search task
+		new HTTPTask().execute(m_lastSearch);
+
+		// Schedule the refresh
+		m_handler.postDelayed(m_refreshRunnable, REFRESH_DELAY);
+	}
 
 	/**
 	 * Creates and adds rows in the UI for each parameter (label and value).
