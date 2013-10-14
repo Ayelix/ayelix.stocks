@@ -149,10 +149,7 @@ public class MainActivity extends Activity {
 	}
 
 	/**
-	 * Starts a search for the given string.
-	 * 
-	 * @param searchString
-	 *            The string to search for (stock symbol or company name).
+	 * Starts a search for the entered string.
 	 */
 	private void search() {
 		String searchString = m_searchEditText.getText().toString();
