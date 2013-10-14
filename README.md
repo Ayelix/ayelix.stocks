@@ -1,3 +1,3 @@
 ayelix.stocks
 =============
-https://github.com/Ayelix/ayelix.stocks.wiki
+https://github.com/Ayelix/ayelix.stocks/wiki
